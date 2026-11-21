@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.1.1 (2026-11-21)
+
+- Add concise summaries and retrieval by section ID to `get_document` and `get_component`, with standalone Markdown for text-only clients.
+- Serve a branded landing page and document how to route it alongside the MCP endpoint behind Traefik.
+- Document the changelog format and versioning conventions.
+
 ## 0.1.0 (2026-11-21)
 
 - Add a read-only MCP server over Streamable HTTP with English and German documentation search, page retrieval, and component lookup.
