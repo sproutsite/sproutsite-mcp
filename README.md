@@ -26,6 +26,60 @@ Set `source_commit` to the full commit of the export you are importing. The impo
 
 The Docker healthcheck calls `GET /healthz`. A healthy response includes `sproutsiteVersion` and `sourceCommit` from the loaded snapshot. To run the server directly, keep `MCP_DATA_DIR` set and run `npm start`. The Node process defaults to `HOST=127.0.0.1` and `PORT=3000`. The image listens on `0.0.0.0:3000` inside the container.
 
+## Deploy behind Traefik
+
+Set `MCP_DATA_DIR` in the local `.env` to the absolute path of the
+prepared snapshot. The snapshot must be readable by the container's
+`node` user. Use a Compose version that supports `!reset` and `up --wait`.
+The production override removes the loopback port mapping and attaches
+the service to the existing `traefik-public` network.
+
+```sh
+docker compose -f compose.yaml -f compose.production.yaml config --quiet
+docker compose -f compose.yaml -f compose.production.yaml up --build -d --wait
+docker compose -f compose.yaml -f compose.production.yaml exec -T mcp \
+  node -e "fetch('http://127.0.0.1:3000/healthz').then(r => r.text()).then(console.log)"
+npm run test:client -- https://mcp.sproutsite.dev/mcp
+```
+
+Check the expected commit and version in the internal health response.
+Use both Compose files when stopping or updating the production service.
+
+To expose the landing page after deploying an image that includes it, use
+this exact Traefik router rule. The existing router can retain its TLS,
+service, rate limit, and access-log settings.
+
+```yaml
+traefik.http.routers.sproutsite-mcp.rule: >-
+  Host(`mcp.sproutsite.dev`) &&
+  (Path(`/`) || Path(`/mcp`) ||
+   Path(`/assets/sproutsite-mcp.css`) ||
+   Path(`/assets/sproutsite-logo.svg`) ||
+   Path(`/assets/sproutsite-wave.svg`) ||
+   Path(`/assets/nunito-latin-variable.woff2`) ||
+   Path(`/assets/eb-garamond-latin-variable.woff2`))
+```
+
+Keep `/healthz` internal. The landing page and its assets use the exact
+paths in the rule above.
+
+### Landing page asset sources
+
+Source paths below are relative to the Sproutsite repository. The image
+bundles the license and attribution files under `public/licenses/`.
+
+| Bundled asset | Sproutsite source | Bundled license and notices |
+| --- | --- | --- |
+| `sproutsite-logo.svg` | `public/branding/logo-light.svg` (official navbar symbol for dark backgrounds) | `Sproutsite-LICENSE.txt`, `Sproutsite-NOTICE.txt` |
+| `sproutsite-wave.svg` | `public/backgrounds/hero-waves.svg` | `Sproutsite-LICENSE.txt`, `Sproutsite-NOTICE.txt` |
+| `nunito-latin-variable.woff2` | `src/themes/default/styles/foundation/fonts/nunito-latin-variable.woff2` | `Nunito-OFL.txt`, copied from `src/themes/default/styles/foundation/fonts/OFL.txt` |
+| `eb-garamond-latin-variable.woff2` | `src/themes/default/styles/foundation/fonts/eb-garamond-latin-variable.woff2` | `EB-Garamond-OFL.txt`, copied from `src/themes/default/styles/foundation/fonts/eb-garamond-OFL.txt` |
+
+The SVGs are copied unchanged. The landing page CSS controls the hero
+wave crop. The retained starter notice is copied from
+`src/package/starter-assets/public/NOTICE.txt` and applies to the neutral
+starter assets.
+
 ## Connect an MCP client
 
 Add a remote MCP server in your client, select **Streamable HTTP**, and enter `http://127.0.0.1:3000/mcp`. For a client that uses the common JSON configuration format, the local entry looks like this.

@@ -13,6 +13,7 @@ COPY --from=build /app/package.json ./
 COPY --from=build /app/node_modules/ ./node_modules/
 COPY --from=build /app/dist/src/ ./dist/src/
 COPY LICENSE ./
+COPY public/ ./public/
 USER node
 EXPOSE 3000
 HEALTHCHECK --interval=15s --timeout=3s --start-period=5s --retries=3 \

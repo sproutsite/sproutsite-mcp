@@ -1,0 +1,10 @@
+Neutral website starter assets
+Copyright 2026 Björn Hempel
+
+These first-party neutral illustrations and icons were prepared for Sproutsite.
+Source project: https://github.com/sproutsite/sproutsite
+
+Licensed under the Apache License, Version 2.0. See LICENSE.txt in this directory.
+The artwork contains no Sproutsite logo, third-party images or embedded fonts.
+Preserve applicable notices when redistributing these files. No visible website
+footer attribution is required by this notice.

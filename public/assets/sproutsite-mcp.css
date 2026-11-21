@@ -1,0 +1,95 @@
+@font-face {
+  font-family: "Nunito";
+  src: url("/assets/nunito-latin-variable.woff2") format("woff2");
+  font-weight: 200 1000;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "EB Garamond";
+  src: url("/assets/eb-garamond-latin-variable.woff2") format("woff2");
+  font-weight: 400 800;
+  font-display: swap;
+}
+
+:root {
+  color: #0b1f3a;
+  background: #fff;
+  font: 1rem/1.6 system-ui, sans-serif;
+  --gutter: clamp(1rem, 4vw, 2rem);
+  --section: clamp(1.875rem, 3.75vw, 3.375rem);
+}
+
+body { margin: 0; }
+
+.wrap {
+  box-sizing: border-box;
+  max-width: 48rem;
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+
+.hero {
+  color: #fff;
+  background-color: #0b1f3a;
+  background-image: linear-gradient(180deg, #071a36, rgb(7 26 54 / 68%)),
+    url("/assets/sproutsite-wave.svg"),
+    linear-gradient(120deg, #071a36, #0d2b50);
+  background-repeat: no-repeat;
+  background-position: right bottom;
+  background-size: cover, clamp(24rem, 70vw, 46rem) auto, cover;
+  padding-block: var(--section) clamp(3.375rem, 6vw, 5rem);
+}
+
+.brand { display: inline-block; }
+.brand img { display: block; width: 2.5rem; height: auto; }
+
+h1, h2 {
+  font-family: "EB Garamond", Georgia, serif;
+  font-weight: 500;
+  margin: 0;
+}
+
+h1 {
+  margin-top: clamp(1.5rem, 4vw, 2.5rem);
+  font-size: clamp(2.25rem, 5vw, 4rem);
+  line-height: 1.1;
+}
+
+h2 {
+  font-size: clamp(1.75rem, 3vw, 2.5rem);
+  line-height: 1.2;
+}
+
+.hero p { max-width: 34rem; font-size: 1.125rem; margin: .75rem 0 0; }
+.setup { padding-block: var(--section); }
+.setup p { margin: .75rem 0 1.125rem; }
+
+label {
+  display: block;
+  font: 800 1rem/1.4 "Nunito", system-ui, sans-serif;
+  margin-bottom: .375rem;
+}
+
+input {
+  box-sizing: border-box;
+  display: block;
+  width: 100%;
+  max-width: 34rem;
+  min-height: 3rem;
+  border: 1px solid #0875c9;
+  border-inline-start: .25rem solid #20d5c1;
+  border-radius: .5rem;
+  padding: .625rem .5rem;
+  color: inherit;
+  background: #f3f9fd;
+  font: 1rem/1.4 "Nunito", system-ui, sans-serif;
+}
+
+.access { color: #29415b; }
+nav { display: flex; flex-wrap: wrap; gap: .75rem 1.5rem; }
+nav a { color: #06528d; text-underline-offset: .2em; }
+nav a:hover { color: #0b1f3a; }
+
+:focus-visible { outline: 3px solid #0875c9; outline-offset: 4px; }
+.hero :focus-visible { outline-color: #65d82f; }

@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { createServer, type ServerResponse } from 'node:http';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import type { Documentation } from './documentation.js';
@@ -12,9 +13,35 @@ function rpcError(response: ServerResponse, status: number, code: number, messag
   json(response, status, { jsonrpc: '2.0', id: null, error: { code, message } });
 }
 
+const landingFiles = [
+  ['/', 'index.html', 'text/html; charset=utf-8'],
+  ['/assets/sproutsite-mcp.css', 'assets/sproutsite-mcp.css', 'text/css; charset=utf-8'],
+  ['/assets/sproutsite-logo.svg', 'assets/sproutsite-logo.svg', 'image/svg+xml'],
+  ['/assets/sproutsite-wave.svg', 'assets/sproutsite-wave.svg', 'image/svg+xml'],
+  ['/assets/nunito-latin-variable.woff2', 'assets/nunito-latin-variable.woff2', 'font/woff2'],
+  ['/assets/eb-garamond-latin-variable.woff2', 'assets/eb-garamond-latin-variable.woff2', 'font/woff2'],
+] as const;
+
 export function createHttpServer(documentation: Documentation, version: string) {
+  const landing = new Map<string, { body: Buffer; type: string }>(
+    landingFiles.map(([path, file, type]) => [
+      path, { body: readFileSync(new URL(`../../public/${file}`, import.meta.url)), type },
+    ]),
+  );
   const server = createServer({ requestTimeout: 15_000, headersTimeout: 10_000 }, async (request, response) => {
     const path = request.url?.split('?', 1)[0];
+    const page = path && landing.get(path);
+    if (page && (request.method === 'GET' || request.method === 'HEAD')) {
+      response.writeHead(200, {
+        'Content-Type': page.type,
+        'Content-Length': page.body.length,
+        'Cache-Control': 'no-cache',
+        'Content-Security-Policy': "default-src 'none'; style-src 'self'; img-src 'self'; font-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'",
+        'X-Content-Type-Options': 'nosniff',
+      });
+      response.end(request.method === 'HEAD' ? undefined : page.body);
+      return;
+    }
     if (path === '/healthz' && request.method === 'GET') {
       json(response, 200, {
         status: 'ok',

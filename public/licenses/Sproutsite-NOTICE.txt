@@ -1,0 +1,14 @@
+Sproutsite
+Copyright 2026 Björn Hempel
+
+Sproutsite was originally created by Björn Hempel.
+
+Original project:
+https://github.com/sproutsite/sproutsite
+
+Official website:
+https://sproutsite.dev
+
+This product includes software developed as part of the
+Sproutsite project and is licensed under the Apache License,
+Version 2.0.
