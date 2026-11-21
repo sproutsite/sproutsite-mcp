@@ -1,6 +1,6 @@
 # Sproutsite MCP
 
-Sproutsite MCP exposes Sproutsite's documentation and component showcase as a public, read-only MCP service over Streamable HTTP. The planned production endpoint is `https://mcp.sproutsite.dev/mcp`.
+Sproutsite MCP exposes Sproutsite's documentation and component showcase as a public, read-only MCP service over Streamable HTTP.
 
 The Docker image contains the server, its runtime dependencies and its license. At startup, the server reads the selected Sproutsite snapshot from a local data directory. It checks schema version 1, validates the export against its JSON Schema and verifies the source repository, Git commit, clean-checkout provenance, Sproutsite version and all five SHA-256 digests against the lockfile.
 
@@ -41,7 +41,9 @@ Add a remote MCP server in your client, select **Streamable HTTP**, and enter `h
 }
 ```
 
-Use the production URL once the service is deployed. The endpoint is unauthenticated and stateless. It accepts MCP over POST and returns JSON. Requests with an `Origin` header must come from the planned production origin or a loopback origin matching the listener's port. Native clients can omit the header. See the [official MCP TypeScript SDK transport guide](https://ts.sdk.modelcontextprotocol.io/server).
+For a self-hosted instance, use its own HTTPS URL ending in `/mcp`, for example `https://mcp.example.org/mcp`.
+
+The endpoint is unauthenticated and stateless. It accepts MCP over POST and returns JSON. Clients that send an `Origin` header must use an origin allowed by the [server](src/http.ts). See the [official MCP TypeScript SDK transport guide](https://ts.sdk.modelcontextprotocol.io/server).
 
 | Tool | Example input | Result |
 | --- | --- | --- |
