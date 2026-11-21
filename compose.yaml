@@ -1,0 +1,15 @@
+services:
+  mcp:
+    build: .
+    image: ${MCP_IMAGE:-sproutsite-mcp:local}
+    init: true
+    read_only: true
+    ports:
+      - "127.0.0.1:${MCP_PORT:-3000}:3000"
+    volumes:
+      - type: bind
+        source: ${MCP_DATA_DIR:?Set MCP_DATA_DIR to a prepared snapshot directory}
+        target: /data
+        read_only: true
+        bind:
+          create_host_path: false
