@@ -1,5 +1,22 @@
 import type { Document, Language, Snapshot } from './snapshot.js';
 
+interface RetrievalOptions {
+  view?: 'summary';
+  sectionId?: string;
+}
+
+type Section = Document['sections'][number];
+
+function sectionDetails({ id, markdown, imports, headings, examples, tables, notices, unresolvedExpressions }: Section) {
+  return { id, markdown, imports, headings, examples, tables, notices, unresolvedExpressions };
+}
+
+function sectionSummary(document: Document, section: Section) {
+  const heading = section.headings[0]?.text ?? (section.id === 'hero' ? document.heading : section.id);
+  const anchor = section.headings.find((heading) => heading.anchor)?.anchor;
+  return { id: section.id, heading, anchor };
+}
+
 function words(text: string): Set<string> {
   const normalized = text.normalize('NFKD').replace(/\p{M}/gu, '').toLowerCase();
   return new Set(normalized.match(/[\p{L}\p{N}]+/gu) ?? []);
@@ -42,22 +59,43 @@ export class Documentation {
     return { id, pageId, title, description, kind, url, language: locale, sproutsiteVersion: this.version };
   }
 
-  private details(document: Document) {
+  private details(
+    document: Document,
+    { sectionId, view }: RetrievalOptions,
+    component?: { name: string; importPath: string },
+  ) {
+    const metadata = { ...component, ...this.summary(document) };
+    if (sectionId !== undefined) {
+      if (view === 'summary') return { error: 'Use either view: "summary" or sectionId.' };
+      const section = document.sections.find((section) => section.id === sectionId);
+      if (!section) {
+        return { error: `Unknown section ID "${sectionId}" in "${document.id}". Use view: "summary" to list the available IDs.` };
+      }
+      const { heading, anchor } = sectionSummary(document, section);
+      const url = new URL(document.url);
+      if (anchor) url.hash = anchor;
+      return {
+        ...metadata,
+        view: 'section' as const,
+        url: url.href,
+        section: { ...sectionDetails(section), heading },
+      };
+    }
+
+    if (view === 'summary') {
+      return {
+        ...metadata,
+        view,
+        sections: document.sections.map((section) => sectionSummary(document, section)),
+      };
+    }
+
     return {
-      ...this.summary(document),
+      ...metadata,
       heading: document.heading,
       markdown: document.markdown,
       translations: document.translations,
-      sections: document.sections.map((section) => ({
-        id: section.id,
-        markdown: section.markdown,
-        imports: section.imports,
-        headings: section.headings,
-        examples: section.examples,
-        tables: section.tables,
-        notices: section.notices,
-        unresolvedExpressions: section.unresolvedExpressions,
-      })),
+      sections: document.sections.map(sectionDetails),
     };
   }
 
@@ -81,19 +119,19 @@ export class Documentation {
       .map(({ document }) => this.summary(document));
   }
 
-  getDocument(id: string, language?: Language) {
+  getDocument(id: string, language?: Language, options: RetrievalOptions = {}) {
     const exact = this.byId.get(id);
     const document = exact && language === undefined
       ? exact
       : this.byPage.get(`${exact?.pageId ?? id}:${language ?? 'en'}`);
-    return document && this.details(document);
+    return document && this.details(document, options);
   }
 
-  getComponent(name: string, language: Language) {
+  getComponent(name: string, language: Language, options: RetrievalOptions = {}) {
     const component = this.components.get(name.toLowerCase());
     const id = component?.documents.find((reference) => reference.locale === language)?.id;
     const document = id && this.byId.get(id);
     if (!component || !document) return undefined;
-    return { name: component.name, importPath: component.importPath, ...this.details(document) };
+    return this.details(document, options, { name: component.name, importPath: component.importPath });
   }
 }

@@ -2,6 +2,107 @@ import assert from 'node:assert/strict';
 import { pathToFileURL } from 'node:url';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
+import { CallToolResultSchema, type CallToolResult, type TextContent } from '@modelcontextprotocol/sdk/types.js';
+import type { Document } from '../src/snapshot.js';
+
+type FullRetrieval = Pick<Document, 'title' | 'description' | 'url' | 'markdown' | 'sections'> & {
+  language: string;
+  sproutsiteVersion: string;
+};
+
+function textContent({ content }: Pick<CallToolResult, 'content'>): string {
+  return content.filter((item): item is TextContent => item.type === 'text').map((item) => item.text).join('\n');
+}
+
+async function exerciseRetrievalViews(client: Client) {
+  async function call(name: string, args: Record<string, unknown>) {
+    return CallToolResultSchema.parse(await client.callTool({ name, arguments: args }));
+  }
+
+  for (const language of ['en', 'de']) {
+    for (const [name, selector] of [
+      ['get_document', { id: 'showcase/layout' }],
+      ['get_component', { name: 'Columns' }],
+    ] as const) {
+      const args = { ...selector, language };
+      const full = await call(name, args);
+      assert.equal(full.isError, undefined);
+      const legacy: FullRetrieval = JSON.parse(textContent(full));
+      assert.deepEqual(full.structuredContent, legacy);
+      assert.equal(legacy.language, language);
+      assert.equal(typeof legacy.markdown, 'string');
+      const sectionId = '08-dividers';
+      const original = legacy.sections.find((section) => section.id === sectionId);
+      assert.ok(original);
+
+      const overview = await call(name, { ...args, view: 'summary' });
+      assert.equal(overview.isError, undefined);
+      const overviewText = textContent(overview);
+      const summary = overview.structuredContent;
+      assert.equal(summary?.view, 'summary');
+      assert.equal(summary?.url, legacy.url);
+      assert.equal(summary?.language, language);
+      assert.equal(summary?.sproutsiteVersion, legacy.sproutsiteVersion);
+      assert.equal(summary?.title, legacy.title);
+      assert.equal(summary?.description, legacy.description);
+      assert.equal(summary?.markdown, undefined);
+      assert.ok(Array.isArray(summary?.sections));
+      assert.deepEqual(summary.sections.map(({ id }) => id), legacy.sections.map(({ id }) => id));
+      for (const section of summary.sections) {
+        assert.ok(overviewText.includes(`\`${section.id}\` — ${section.heading}`));
+        assert.equal(section.markdown, undefined);
+      }
+      assert.ok(overviewText.includes(legacy.title) && overviewText.includes(legacy.description));
+      assert.ok(overviewText.includes(` · ${language} · Sproutsite ${legacy.sproutsiteVersion}`));
+      assert.ok(overviewText.includes(legacy.url));
+
+      const selected = await call(name, { ...args, sectionId });
+      assert.equal(selected.isError, undefined);
+      const selectedText = textContent(selected);
+      const sectionResult = selected.structuredContent;
+      const heading = original.headings[0];
+      assert.ok(heading?.anchor);
+      const url = new URL(legacy.url);
+      url.hash = heading.anchor;
+      assert.equal(sectionResult?.view, 'section');
+      assert.equal(sectionResult?.url, url.href);
+      assert.equal(sectionResult?.language, language);
+      assert.equal(sectionResult?.sproutsiteVersion, legacy.sproutsiteVersion);
+      assert.equal(sectionResult?.sections, undefined);
+      assert.deepEqual(sectionResult?.section, { ...original, heading: heading.text });
+      assert.ok(original.imports.length && original.examples.length && original.tables.length);
+      assert.ok(selectedText.includes(`Section: \`${sectionId}\``));
+      assert.ok(selectedText.includes(url.href));
+      assert.ok(selectedText.includes(` · ${language} · Sproutsite ${legacy.sproutsiteVersion}`));
+      assert.ok(selectedText.includes(original.markdown));
+      for (const statement of original.imports) assert.ok(selectedText.includes(statement));
+      for (const example of original.examples) assert.ok(selectedText.includes(example.code));
+      for (const table of original.tables) {
+        for (const heading of table.headers) assert.ok(selectedText.includes(heading));
+      }
+      if (name === 'get_component') {
+        assert.equal(summary?.name, 'Columns');
+        assert.equal(sectionResult?.importPath, 'sproutsite/components');
+        assert.ok(selectedText.includes('sproutsite/components'));
+      }
+
+      const missing = await call(name, { ...args, sectionId: 'unknown' });
+      assert.equal(missing.isError, true);
+      assert.match(textContent(missing), /Unknown section ID "unknown".*view: "summary"/);
+      const conflicting = await call(name, { ...args, sectionId, view: 'summary' });
+      assert.equal(conflicting.isError, true);
+    }
+
+    const args = { id: 'documentation/getting-started/your-website/hero', language };
+    const overview = await call('get_document', { ...args, view: 'summary' });
+    const hero = await call('get_document', { ...args, sectionId: 'hero' });
+    assert.equal(hero.isError, undefined);
+    assert.equal(hero.structuredContent?.url, overview.structuredContent?.url);
+    const guide = await call('get_document', { ...args, sectionId: '01-guide' });
+    assert.equal(guide.isError, undefined);
+    assert.match(textContent(guide), language === 'en' ? /Partly available/ : /Teilweise möglich/);
+  }
+}
 
 export async function exerciseClient(endpoint: URL, expectedVersion?: string) {
   const client = new Client({ name: 'sproutsite-mcp-smoke-test', version: '1.0.0' });
@@ -79,6 +180,7 @@ export async function exerciseClient(endpoint: URL, expectedVersion?: string) {
       name: 'get_document', arguments: { id: document.id, language: 'fr' },
     });
     assert.equal(invalid.isError, true);
+    await exerciseRetrievalViews(client);
   } finally {
     await client.close();
   }

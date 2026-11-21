@@ -107,6 +107,20 @@ The endpoint is unauthenticated and stateless. It accepts MCP over POST and retu
 
 All entries include the canonical source `url`, `language` and `sproutsiteVersion`. English (`en`) is the default, and German (`de`) is available through `language`. A locale-qualified document ID such as `showcase/accordions:de` selects its own language when the parameter is omitted. You can use the parameter to request the same page in another language. Results only use content available in the selected language. Examples retain the original alerts and badges in their sections, including open and partly available features.
 
+### Retrieve a summary or one section
+
+Use the same optional parameters for `get_document` and `get_component`.
+
+- `view: "summary"` returns the title, short description and ordered list of sections with their stable IDs and headings. A section entry includes its anchor when available.
+- `sectionId` takes an ID from that list and returns one section with its Markdown, imports, examples, tables and notices. Its source URL links directly to the section when the snapshot provides an anchor.
+
+Use one parameter at a time. Omit both for the full response. The two smaller views provide structured data and a standalone Markdown fallback for text-only clients.
+
+| Tool | Summary arguments | Single-section arguments |
+| --- | --- | --- |
+| `get_document` | `{"id":"showcase/layout","language":"en","view":"summary"}` | `{"id":"showcase/layout","language":"en","sectionId":"08-dividers"}` |
+| `get_component` | `{"name":"Columns","language":"de","view":"summary"}` | `{"name":"Columns","language":"de","sectionId":"08-dividers"}` |
+
 ## Prepare a snapshot
 
 1. Select a reviewed Sproutsite commit that contains the exporter. In a clean checkout at that exact commit, run `npm ci` followed by `npm run export:mcp` with the production URL and base settings. If `artifacts/mcp/` already contains the export for that commit, you can import it directly. [Sproutsite export contract](https://github.com/sproutsite/sproutsite/blob/132f9063fc9b7058103cda056cf52ea40b42c05e/docs/mcp-export.md)
